@@ -2,7 +2,8 @@ import type { NextConfig } from 'next';
 const config: NextConfig = {
   output: 'standalone',
   outputFileTracingIncludes: { '/*': ['./migrations/*.sql'] },
-  experimental: { cpus: 2 },
+  // Shared hosting counts processes/threads across all sites on the account.
+  experimental: { cpus: 1, workerThreads: true, webpackBuildWorker: false },
   serverExternalPackages: ['mysql2'],
   images: { remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }] },
   async headers() {

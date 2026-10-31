@@ -159,17 +159,17 @@ export async function createBooking(db: DB, raw: unknown, user: User | null) {
     await tx.query('SELECT id FROM departures WHERE id=$1 FOR UPDATE', [input.departure_id]);
     const q = await quote(tx, input);
     const reserve = await tx.query(
-      'UPDATE departures SET reserved=reserved+$1 WHERE id=$2 AND available AND booking_deadline>now() AND reserved+$1<=capacity RETURNING id',
+      'UPDATE departures SET reserved=reserved+$1 WHERE id=$2 AND available AND booking_deadline>now() AND reserved+$1<=capacity',
       [input.adults + input.children, input.departure_id],
     );
-    if (!reserve.rows.length)
+    if (!reserve.affectedRows)
       throw new AppError('Those seats were just reserved. Please select another date.', 409);
     if (q.promotion) {
       const claim = await tx.query(
-        'UPDATE promotions SET used=used+1 WHERE id=$1 AND used<usage_limit AND active AND starts_at<=now() AND ends_at>now() RETURNING id',
+        'UPDATE promotions SET used=used+1 WHERE id=$1 AND used<usage_limit AND active AND starts_at<=now() AND ends_at>now()',
         [q.promotion.id],
       );
-      if (!claim.rows.length)
+      if (!claim.affectedRows)
         throw new AppError('This promotion has reached its usage limit.', 409);
     }
     const snapshot = {
@@ -186,8 +186,8 @@ export async function createBooking(db: DB, raw: unknown, user: User | null) {
       child_price: q.child_price,
     };
     const b = (
-      await tx.query<Booking>(
-        `INSERT INTO bookings(reference,user_id,departure_id,contact_name,contact_email,contact_phone,adults,children,subtotal,discount,total,deposit_due,payment_method,snapshot,guest_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,now()+interval '48 hours') RETURNING *`,
+      await tx.insertSQL<Booking>(
+        'INSERT INTO bookings(reference,user_id,departure_id,contact_name,contact_email,contact_phone,adults,children,subtotal,discount,total,deposit_due,payment_method,snapshot,guest_token_hash,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,now()+INTERVAL 48 HOUR)',
         [
           reference,
           user?.id || null,
@@ -296,7 +296,7 @@ export async function submitPayment(
         [b.id, input.amount, input.method, input.reference],
       );
     } catch (e) {
-      if ((e as { code?: string }).code === '23505')
+      if ((e as { code?: string }).code === 'ER_DUP_ENTRY')
         throw new AppError('This payment reference has already been submitted.');
       throw e;
     }
@@ -366,7 +366,7 @@ export async function reviewPayment(
           ? 'CONFIRMED'
           : 'PENDING_PAYMENT';
     await tx.query(
-      "UPDATE bookings SET status=$1,expires_at=CASE WHEN $2>0 THEN null ELSE now()+interval '48 hours' END,updated_at=now() WHERE id=$3",
+      'UPDATE bookings SET status=$1,expires_at=CASE WHEN $2>0 THEN null ELSE now()+INTERVAL 48 HOUR END,updated_at=now() WHERE id=$3',
       [status, received, b.id],
     );
     await audit(tx, user, approved ? 'PAYMENT_VERIFIED' : 'PAYMENT_REJECTED', 'payment', p.id, {

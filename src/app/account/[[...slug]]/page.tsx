@@ -23,7 +23,7 @@ export default async function AccountPage({ params }: { params: Promise<{ slug?:
   await expireHolds(db);
   const bookings = (
     await db.query<Booking>(
-      `SELECT b.*,COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0)::int paid FROM bookings b WHERE user_id=$1 ORDER BY created_at DESC`,
+      "SELECT b.*,COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0) paid FROM bookings b WHERE user_id=$1 ORDER BY created_at DESC",
       [user.id],
     )
   ).rows;

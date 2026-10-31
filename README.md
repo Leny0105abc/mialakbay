@@ -1,10 +1,10 @@
 # Lakbay Travel & Tours
 
-A working travel reservation and agency management application built with Next.js App Router, React, TypeScript, Tailwind CSS, Zod, PostgreSQL, Recharts, and pdf-lib. Source is in this repository; no hosted deployment or live payment collection has been enabled.
+A working travel reservation and agency management application built with Next.js App Router, React, TypeScript, Tailwind CSS, Zod, MariaDB/MySQL, Recharts, and pdf-lib. Source is in this repository; no hosted deployment or live payment collection has been enabled.
 
 ## Start locally
 
-Use Node.js **22.13 or newer** (Node 24 recommended) and npm. No separate database installation is required for local development.
+Use Node.js **22.13 or newer** (Node 24 recommended) and npm. A running MariaDB 10.11+ or MySQL 8.0.16+ server is required.
 
 ```powershell
 npm ci
@@ -16,13 +16,13 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). To use another port, update `APP_URL` in `.env`, then run `npm run dev -- --port 3002`.
 
-With `DATABASE_URL` empty, the app uses **PGlite**, an embedded PostgreSQL engine persisted in `.data/postgres`. It runs real PostgreSQL queries and transactions. Run **one application process** against an embedded data directory. Stop the local server before running CLI commands against the same directory. Embedded storage is intended for local use; production requires a managed or self-hosted PostgreSQL database. SQL migrations work on both engines. Parameterized SQL is used directly rather than adding a second ORM layer.
+Use the DB_HOST, DB_PORT, DB_NAME, DB_USER, and DB_PASSWORD values in `.env` to connect to your dedicated MariaDB/MySQL schema. An optional mysql:// or mariadb:// DATABASE_URL is supported. There is no embedded database fallback. The application uses mysql2 prepared statements and InnoDB transactions. See [docs/HOSTINGER.md](docs/HOSTINGER.md) for the production setup. The original PostgreSQL storage, if present in .data, is retained only as a private backup and is not used by the application.
 
 The seed is explicit and repeat-safe on a fresh installation. It creates eight fictional demonstration tours, sample prices, itineraries, future schedules, one sample discount, draft policy text, and editable website content. It creates **no default administrator, customer accounts, bookings, receipts, or reviews**. Do not use sample details for live travel sales. A cancelled `QA Test Traveler` guest reservation may be present in the current local database from browser verification; no real funds were transferred.
 
 ## Create the administrator
 
-Stop the development server first when using embedded storage. Set these values in your local `.env`, which is ignored by Git:
+Set these values in your local `.env`, which is ignored by Git:
 
 ```dotenv
 ADMIN_EMAIL=your-business-email@example.com
@@ -49,7 +49,7 @@ Sign in at `/admin/login`. There are **no shared or hardcoded login credentials*
 - Administration for destinations, packages/images, itinerary days/activities, schedules, reservations, payments, customers/history, inquiries/quotations, promotions/eligibility, reviews, reports/CSV, content, branding/contact/payment settings, staff accounts, and audit logs.
 - Reviews require a completed, fully paid trip and customer ownership; only moderated approved reviews appear publicly. No fictional testimonials are seeded.
 - Database-backed dashboards and six-month charts. **Revenue means verified receipts minus recorded offline refunds**, by ledger receipt date in Asia/Manila. Pending reservations and unverified payment submissions do not count as revenue.
-- PNG/JPEG/WebP image uploads, verified by file signatures, limited to 2 MB, with server authorization. Images are stored in PostgreSQL and served with immutable asset URLs. Upload public marketing imagery only. Payment proof uploads are not collected; payment references are sufficient for the supported manual workflow.
+- PNG/JPEG/WebP image uploads, verified by file signatures, limited to 2 MB, with server authorization. Images are stored in MariaDB/MySQL and served with immutable asset URLs. Upload public marketing imagery only. Payment proof uploads are not collected; payment references are sufficient for the supported manual workflow.
 - Opaque hashed database sessions, HttpOnly/SameSite cookies, scrypt password hashing with random salts, server RBAC, request-origin checks, bounded JSON bodies, Zod validation, database rate limiting, safe CSV cells, response security headers, and administrative audit records.
 - Responsive layouts, mobile filters/menu/checkout, keyboard focus indicators, loading/error/empty states, page metadata, sitemap, robots rules, and TouristTrip structured data.
 
@@ -74,7 +74,7 @@ Guest access requires the reference, email, and a random private key shown once 
 npm run maintenance
 ```
 
-Run this every 15 minutes in your production scheduler. It releases expired unpaid holds, removes expired sessions/rate-limit buckets, creates one upcoming-trip reminder per confirmed booking within three days, and retries pending email notifications. Bookings and availability views also release expired holds. The scheduler is documented, not installed on your computer. With embedded storage, stop the app before running this command.
+Run this every 15 minutes in your production scheduler. It releases expired unpaid holds, removes expired sessions/rate-limit buckets, creates one upcoming-trip reminder per confirmed booking within three days, and retries pending email notifications. Bookings and availability views also release expired holds. The scheduler is documented, not installed on your computer. The web server and scheduled commands may run concurrently against the same MariaDB database.
 
 Optional transactional email uses the Resend HTTP API. Set `RESEND_API_KEY` and `EMAIL_FROM` to a verified sender. New notifications are queued transactionally. `SENT` means the provider accepted the API request; it does not claim inbox delivery. `FAILED` remains retryable; `NOT_CONFIGURED` means no email was attempted. Previously unconfigured notifications are not retroactively sent. The integration uses notification IDs as provider idempotency keys; [Resend retains those keys for 24 hours](https://resend.com/docs/dashboard/emails/idempotency-keys). Do not endlessly retry an ambiguous delivery beyond that window without reviewing provider records.
 
@@ -82,15 +82,17 @@ Optional transactional email uses the Resend HTTP API. Set `RESEND_API_KEY` and 
 
 See [.env.example](.env.example). No environment variable needs to be exposed as `NEXT_PUBLIC_*`.
 
-| Variable                                      | Purpose                                                                                             |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                                | PostgreSQL connection URL; empty selects local embedded PostgreSQL                                  |
-| `APP_URL`                                     | Exact canonical application origin, including port; used for request-origin protection and metadata |
-| `PGLITE_PATH`                                 | Local PostgreSQL data directory, default `.data/postgres`                                           |
-| `DEMO_MODE`                                   | Installation demonstration banner; defaults to enabled                                              |
-| `ADMIN_EMAIL`, `ADMIN_NAME`, `ADMIN_PASSWORD` | CLI-only initial administrator creation                                                             |
-| `RESEND_API_KEY`, `EMAIL_FROM`                | Optional transactional email credentials                                                            |
-| `ALLOW_EMBEDDED_PRODUCTION`                   | Explicit single-process local production testing override; do not use for multi-instance hosting    |
+| Variable                                                   | Purpose                                                                     |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------- |
+| DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD            | MariaDB/MySQL connection; Hostinger host is 127.0.0.1                       |
+| DB_POOL_SIZE                                               | Connection pool size (default 5)                                            |
+| DB_SSL                                                     | true for verified TLS to a remote database                                  |
+| DATABASE_URL                                               | Optional mysql:// or mariadb:// connection URL alternative                  |
+| APP_URL                                                    | Exact canonical origin, including port, for request protection and metadata |
+| DEMO_MODE                                                  | Explicit demonstration banner                                               |
+| ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD                    | CLI-only administrator setup                                                |
+| RESEND_API_KEY, EMAIL_FROM                                 | Optional email provider credentials                                         |
+| TEST_DB_HOST, TEST_DB_PORT, TEST_DB_USER, TEST_DB_PASSWORD | Dedicated integration-test connection with CREATE/DROP on lakbay_test_*     |
 
 ## Checks
 
@@ -102,20 +104,13 @@ npm run build
 npm run test:smoke
 ```
 
-`npm test` runs isolated in-memory PostgreSQL integration tests for hashing, pricing, overbooking, promotion concurrency, permissions, ownership, payment verification/idempotency, refunds, cancellation/expiry, snapshots, reports, and CSV safety. `npm run test:smoke` requires a current production build and uses port **3101** and a fresh `.data/http-smoke-<uuid>` database. It creates random test credentials without printing them, starts a temporary production server, exercises real HTTP routes, and stops the server. Its generated test database is separate from agency data and retained for inspection.
+`npm test` runs against a newly created, isolated MariaDB schema and drops only that schema afterwards. Tests cover hashing, pricing, overbooking, promotion concurrency, permissions, ownership, payment review, refunds, cancellation, snapshots, reports, and CSV safety. `npm run test:smoke` requires a current production build, creates another isolated MariaDB schema, and starts a temporary server on port 3101 to exercise actual HTTP routes. Test credentials are never printed. Configure a dedicated TEST_DB_USER; never point tests at production.
 
 See [docs/VERIFICATION.md](docs/VERIFICATION.md) for the latest results and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for data and API design.
 
 ## Deploy
 
-1. Provision a dedicated PostgreSQL 15+ database. Use a TLS connection with certificate verification and a restricted database user. Configure `DATABASE_URL`, your exact HTTPS `APP_URL`, `NODE_ENV=production`, `DEMO_MODE`, and optional email settings as server secrets.
-2. Install with `npm ci`, run `npm run db:migrate` once in a release job, and run `npm run build`. Start with `npm start` behind an HTTPS reverse proxy or a Node-compatible host. This full-stack app cannot be deployed as a static export.
-3. Run `npm run admin:create` against the production database using temporary setup environment variables. Do not seed demonstration content into a live customer database. If starting with samples in staging, replace/archive them before live operations.
-4. Keep `migrations/` available to release/runtime processes. Database backups must include uploaded image data, payment ledgers, booking snapshots, and audit records. Test restoration and use a deliberate data-retention policy for traveler/contact information.
-5. Configure the maintenance scheduler and verified sender. Restrict access to database credentials and logs. Configure the reverse proxy to supply trusted client IP headers for rate limiting. Use one database URL consistently across web and scheduled processes.
-6. Verify the deployed customer reservation → submission → staff verification → voucher flow with test data before taking live reservations.
-
-A local production rehearsal can use `ALLOW_EMBEDDED_PRODUCTION=true` with `npm run build` and `npm start` in a single process. Use production PostgreSQL for shared/multi-instance/serverless hosting. The deployment code path supports a standard `pg` pool, but this machine’s tests used embedded PostgreSQL; no remote database or provider credentials were supplied.
+Follow [docs/HOSTINGER.md](docs/HOSTINGER.md) for the exact Hostinger environment, migrations, build, backup, and verification steps. The app requires Node.js hosting and MariaDB/MySQL; it is not a static HTML export. No PostgreSQL service is required.
 
 ## External configuration and scope
 
@@ -126,4 +121,4 @@ A local production rehearsal can use `ALLOW_EMBEDDED_PRODUCTION=true` with `npm 
 - Agency legal/privacy/cancellation text and imagery must be approved/replaced by the actual operator. Demonstration photography is illustrative and comes from Unsplash image URLs.
 - Password reset, MFA, partial refunds, payment-proof uploads, supplier/flight APIs, and automated financial transfers are not implemented. The supported workflows are clearly bounded above.
 
-Framework references: [Next.js deployment](https://nextjs.org/docs/app/getting-started/deploying), [PGlite local storage](https://pglite.dev/docs/filesystems), [node-postgres transactions](https://node-postgres.com/features/transactions).
+Framework references: [Next.js deployment](https://nextjs.org/docs/app/getting-started/deploying), [Hostinger MySQL setup](https://www.hostinger.com/support/connecting-a-hostinger-mysql-database-to-a-node-js-application/), [mysql2](https://sidorares.github.io/node-mysql2/docs).

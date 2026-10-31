@@ -26,7 +26,14 @@ import {
   expireHolds,
   notify,
 } from '@/lib/booking';
-import { tours, departures, itinerary, settings } from '@/lib/data';
+import {
+  tours,
+  departures,
+  itinerary,
+  settings,
+  queryInquiries,
+  queryPromotions,
+} from '@/lib/data';
 import { adminSave, savePackage } from '@/lib/admin';
 import { reports, csv } from '@/lib/reports';
 import { deliverEmails } from '@/lib/email';
@@ -80,7 +87,7 @@ async function handle(req: NextRequest, context: Context) {
           return ok(
             (
               await db.query<Booking>(
-                "SELECT b.*,COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0)::int paid FROM bookings b WHERE user_id=$1 ORDER BY created_at DESC",
+                "SELECT b.*,COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0) paid FROM bookings b WHERE user_id=$1 ORDER BY created_at DESC",
                 [user.id],
               )
             ).rows,
@@ -199,14 +206,7 @@ async function handle(req: NextRequest, context: Context) {
       }
       if (root === 'inquiries') {
         signedIn(user);
-        return ok(
-          (
-            await db.query(
-              "SELECT i.*,COALESCE((SELECT jsonb_agg(q ORDER BY q.created_at DESC) FROM inquiry_quotations q WHERE q.inquiry_id=i.id),'[]'::jsonb) quotations FROM custom_inquiries i WHERE user_id=$1 ORDER BY created_at DESC",
-              [user.id],
-            )
-          ).rows,
-        );
+        return ok((await queryInquiries(db, user.id)).rows);
       }
       if (root === 'admin') {
         staff(user);
@@ -227,7 +227,7 @@ async function handle(req: NextRequest, context: Context) {
         if (section === 'export') {
           const rows = (
             await db.query(
-              `SELECT reference,contact_name,contact_email,status,adults,children,round(total/100.0,2) AS total_php,round(COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0)/100.0,2) verified_paid_php,snapshot->>'title' package,snapshot->>'departure_at' departure,created_at FROM bookings b ORDER BY created_at DESC`,
+              `SELECT reference,contact_name,contact_email,status,adults,children,round(total/100.0,2) AS total_php,round(COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0)/100.0,2) verified_paid_php,JSON_UNQUOTE(JSON_EXTRACT(snapshot,'$.title')) package,JSON_UNQUOTE(JSON_EXTRACT(snapshot,'$.departure_at')) departure,created_at FROM bookings b ORDER BY created_at DESC`,
             )
           ).rows;
           await audit(db, user, 'CSV_EXPORTED', 'report', 'bookings');
@@ -261,7 +261,7 @@ async function handle(req: NextRequest, context: Context) {
           return ok({
             items: (
               await db.query(
-                `SELECT b.id,b.reference,b.contact_name,b.contact_email,b.status,b.total,b.adults,b.children,b.created_at,b.snapshot,COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0)::int paid FROM bookings b ORDER BY created_at DESC`,
+                "SELECT b.id,b.reference,b.contact_name,b.contact_email,b.status,b.total,b.adults,b.children,b.created_at,b.snapshot,COALESCE((SELECT sum(CASE WHEN kind='PAYMENT' THEN amount ELSE -amount END) FROM payments WHERE booking_id=b.id),0) paid FROM bookings b ORDER BY created_at DESC",
               )
             ).rows,
           });
@@ -277,7 +277,7 @@ async function handle(req: NextRequest, context: Context) {
           return ok({
             items: (
               await db.query(
-                `SELECT u.id,u.name,u.email,u.created_at,p.phone,p.address,(SELECT count(*)::int FROM bookings b WHERE b.user_id=u.id) bookings FROM users u LEFT JOIN customer_profiles p ON p.user_id=u.id WHERE role='CUSTOMER' ORDER BY u.created_at DESC`,
+                "SELECT u.id,u.name,u.email,u.created_at,p.phone,p.address,(SELECT count(*) FROM bookings b WHERE b.user_id=u.id) bookings FROM users u LEFT JOIN customer_profiles p ON p.user_id=u.id WHERE role='CUSTOMER' ORDER BY u.created_at DESC",
               )
             ).rows,
             bookings: (
@@ -288,19 +288,11 @@ async function handle(req: NextRequest, context: Context) {
           });
         if (section === 'inquiries')
           return ok({
-            items: (
-              await db.query(
-                "SELECT i.*,COALESCE((SELECT jsonb_agg(q ORDER BY created_at DESC) FROM inquiry_quotations q WHERE q.inquiry_id=i.id),'[]'::jsonb) quotations FROM custom_inquiries i ORDER BY created_at DESC",
-              )
-            ).rows,
+            items: (await queryInquiries(db)).rows,
           });
         if (section === 'promotions')
           return ok({
-            items: (
-              await db.query(
-                "SELECT p.*,COALESCE((SELECT jsonb_agg(package_id) FROM promotion_packages pp WHERE pp.promotion_id=p.id),'[]'::jsonb) package_ids FROM promotions p ORDER BY starts_at DESC",
-              )
-            ).rows,
+            items: (await queryPromotions(db)).rows,
             packages: await tours(true, db),
           });
         if (section === 'reviews')
@@ -312,7 +304,9 @@ async function handle(req: NextRequest, context: Context) {
             ).rows,
           });
         if (section === 'content')
-          return ok({ items: (await db.query('SELECT * FROM website_content ORDER BY key')).rows });
+          return ok({
+            items: (await db.query('SELECT * FROM website_content ORDER BY `key`')).rows,
+          });
         if (section === 'settings') {
           if (user.role !== 'SUPER_ADMIN')
             throw new AppError('Super administrator access required.', 403);
@@ -378,8 +372,8 @@ async function handle(req: NextRequest, context: Context) {
             );
           account = await db.transaction(async (tx) => {
             const u = (
-              await tx.query<User>(
-                'INSERT INTO users(email,name,password_hash) VALUES($1,$2,$3) RETURNING id,name,email,role',
+              await tx.insertSQL<User>(
+                'INSERT INTO users(email,name,password_hash) VALUES($1,$2,$3)',
                 [v.email, v.name, await hashPassword(v.password)],
               )
             ).rows[0];
@@ -408,7 +402,7 @@ async function handle(req: NextRequest, context: Context) {
         } else throw new AppError('Unknown authentication action.', 404);
         const secret = token();
         await db.query(
-          "INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+interval '7 days')",
+          'INSERT INTO sessions(token_hash,user_id,expires_at) VALUES($1,$2,now()+INTERVAL 7 DAY)',
           [hashToken(secret), account.id],
         );
         jar.set(COOKIE, secret, { ...cookieOptions, maxAge: 604800 });
@@ -509,7 +503,7 @@ async function handle(req: NextRequest, context: Context) {
         await db.transaction(async (tx) => {
           await tx.query('UPDATE users SET name=$1 WHERE id=$2', [v.name, user.id]);
           await tx.query(
-            'INSERT INTO customer_profiles(user_id,phone,address) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET phone=$2,address=$3',
+            'INSERT INTO customer_profiles(user_id,phone,address) VALUES($1,$2,$3) ON DUPLICATE KEY UPDATE phone=$2,address=$3',
             [user.id, v.phone, v.address],
           );
         });
@@ -544,8 +538,8 @@ async function handle(req: NextRequest, context: Context) {
           throw new AppError('Choose valid future travel dates.');
         await rateLimit(db, `inquiry:${hashToken(v.email)}`, 5, 3600);
         const row = (
-          await db.query<{ id: string }>(
-            'INSERT INTO custom_inquiries(user_id,name,email,phone,destination,start_date,end_date,travelers,budget,accommodation,interests,requests) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id',
+          await db.insertSQL<{ id: string }>(
+            'INSERT INTO custom_inquiries(user_id,name,email,phone,destination,start_date,end_date,travelers,budget,accommodation,interests,requests) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
             [
               user?.id || null,
               v.name,
@@ -604,12 +598,12 @@ async function handle(req: NextRequest, context: Context) {
         { status: 422 },
       );
     const code = (error as { code?: string }).code;
-    if (code === '23505')
+    if (code === 'ER_DUP_ENTRY')
       return NextResponse.json(
         { error: 'This record already exists. Check the unique name, code, reference, or email.' },
         { status: 409 },
       );
-    if (code === '23503' || code === '23514')
+    if (code === 'ER_NO_REFERENCED_ROW_2' || code === 'ER_CHECK_CONSTRAINT_VIOLATED')
       return NextResponse.json(
         {
           error:

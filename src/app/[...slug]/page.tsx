@@ -577,7 +577,7 @@ export default async function PublicPage(props: Props) {
     if (slug[1]) {
       const c = (
         await db.query<{ title: string; body: string }>(
-          'SELECT * FROM website_content WHERE key=$1',
+          'SELECT * FROM website_content WHERE `key`=$1',
           ['blog-' + slug[1]],
         )
       ).rows[0];
@@ -596,7 +596,7 @@ export default async function PublicPage(props: Props) {
     }
     const articles = (
       await db.query<{ key: string; title: string; body: string }>(
-        "SELECT * FROM website_content WHERE key LIKE 'blog-%' ORDER BY key",
+        "SELECT * FROM website_content WHERE `key` LIKE 'blog-%' ORDER BY `key`",
       )
     ).rows;
     return (
@@ -635,7 +635,7 @@ export default async function PublicPage(props: Props) {
   if (['about', 'faq', 'privacy', 'terms', 'cancellation'].includes(root)) {
     const c = (
       await db.query<{ title: string; body: string }>(
-        'SELECT * FROM website_content WHERE key=$1',
+        'SELECT * FROM website_content WHERE `key`=$1',
         [root],
       )
     ).rows[0];

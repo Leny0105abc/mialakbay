@@ -25,7 +25,7 @@ export default async function Home() {
   const [packages, destinations, contents, promos, reviews] = await Promise.all([
     tours(false, db),
     db.query<{ id: string; name: string; image_url: string; country: string; packages: number }>(
-      `SELECT d.*,(SELECT count(*)::int FROM packages p WHERE p.destination_id=d.id AND p.status='PUBLISHED') packages FROM destinations d WHERE featured ORDER BY name LIMIT 4`,
+      "SELECT d.*,(SELECT count(*) FROM packages p WHERE p.destination_id=d.id AND p.status='PUBLISHED') packages FROM destinations d WHERE featured ORDER BY name LIMIT 4",
     ),
     db.query<Content>('SELECT * FROM website_content'),
     db.query<{

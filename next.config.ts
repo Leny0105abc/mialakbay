@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next';
 const config: NextConfig = {
-  serverExternalPackages: ['@electric-sql/pglite', 'pg'],
+  output: 'standalone',
+  outputFileTracingIncludes: { '/*': ['./migrations/*.sql'] },
+  experimental: { cpus: 2 },
+  serverExternalPackages: ['mysql2'],
   images: { remotePatterns: [{ protocol: 'https', hostname: 'images.unsplash.com' }] },
   async headers() {
     return [

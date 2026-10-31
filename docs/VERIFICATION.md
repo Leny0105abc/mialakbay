@@ -1,13 +1,13 @@
 # Verification record
 
-Verified on October 23, 2026 (Asia/Manila), Windows, Node.js 24.18.0, Next.js 16.4.2.
+MariaDB conversion reverified on October 31, 2026 (Asia/Manila), Windows, MariaDB 11.4.13, Node.js 24.18.0, Next.js 16.4.2.
 
 | Check                          | Result                                                                                                           |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
 | TypeScript `npm run typecheck` | Passed                                                                                                           |
 | ESLint `npm run lint`          | Passed                                                                                                           |
 | Production `npm run build`     | Passed; App Router routes compiled                                                                               |
-| PostgreSQL integration tests   | 16 passed, 0 failed                                                                                              |
+| MariaDB integration tests      | 16 passed, 0 failed, using real InnoDB transactions across multiple pooled connections                           |
 | Production HTTP smoke test     | Passed using a separate test database                                                                            |
 | Browser customer flow          | Search → tour detail → checkout → server quote/discount → guest reservation → reservation details → cancellation |
 | Browser responsiveness         | Mobile/default 412 px and desktop 1440 px; no horizontal document overflow; mobile menu works                    |
@@ -18,7 +18,7 @@ The production HTTP smoke test covers actual Next.js rendering, registration, co
 
 The browser test used the clearly fictional package Palawan Island Adventure. Its test reservation `LKB-2026-0D77BEA1` was cancelled and its seat released. No payment was recorded in the main local database. HTTP test users/transactions are isolated in `.data/http-smoke-<uuid>` and use randomly generated passwords.
 
-No live provider, remote PostgreSQL, production hosting, real payment, email inbox delivery, or real travel availability was verified. These require the operator’s accounts and configuration. Email and card integrations were not falsely reported as successful.
+No real payment, email inbox delivery, or real travel availability was claimed during tests. Hosting-specific verification is recorded in the October 31 repair notes in HOSTINGER.md. Old embedded PostgreSQL data is retained in private backups; damaged recovery data must be restored from a valid backup before a business-data import.
 
 Visual snapshots: [desktop](preview-desktop.jpg) and [mobile](preview-mobile.jpg).
 

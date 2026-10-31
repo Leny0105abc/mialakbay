@@ -14,15 +14,18 @@
     "admin:create": "tsx scripts/create-admin.ts",
     "test:smoke": "tsx scripts/smoke.ts",
     "maintenance": "tsx scripts/maintenance.ts",
-    "format": "prettier --write src scripts tests *.json *.ts *.mjs README.md docs/*.md"
+    "format": "prettier --write src scripts tests *.json *.ts *.mjs README.md docs/*.md",
+    "postbuild": "node scripts/prepare-standalone.mjs",
+    "db:check": "tsx scripts/db-check.ts",
+    "db:import": "tsx scripts/import-data.ts",
+    "hostinger:build": "next build --webpack && node scripts/prepare-standalone.mjs"
   },
   "dependencies": {
-    "@electric-sql/pglite": "^0.3.14",
     "dotenv": "^18.0.9",
     "lucide-react": "^0.468.0",
+    "mysql2": "^3.24.6",
     "next": "^16.0.0",
     "pdf-lib": "^1.17.1",
-    "pg": "^8.16.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.2.0",
@@ -31,7 +34,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^24.0.0",
-    "@types/pg": "^8.15.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "eslint": "^9.0.0",

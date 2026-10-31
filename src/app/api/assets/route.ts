@@ -39,8 +39,8 @@ export async function POST(req: NextRequest) {
         'Only PNG, JPEG, and WebP images are accepted. SVG files are not supported.',
       );
     const row = (
-      await db.query<{ id: string }>(
-        'INSERT INTO uploaded_assets(mime_type,bytes,uploaded_by) VALUES($1,$2,$3) RETURNING id',
+      await db.insertSQL<{ id: string }>(
+        'INSERT INTO uploaded_assets(mime_type,bytes,uploaded_by) VALUES($1,$2,$3)',
         [mime, bytes, user.id],
       )
     ).rows[0];

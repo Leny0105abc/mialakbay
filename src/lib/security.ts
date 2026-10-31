@@ -60,12 +60,16 @@ export function signedIn(user: User | null): asserts user is User {
   if (!user) throw new AppError('Please sign in to continue.', 401);
 }
 export async function rateLimit(db: DB, key: string, limit = 10, windowSeconds = 900) {
-  const result = await db.query<{ count: number }>(
-    `INSERT INTO rate_limits(key,count,reset_at) VALUES ($1,1,now()+($2 * interval '1 second')) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN rate_limits.reset_at<now() THEN 1 ELSE rate_limits.count+1 END,reset_at=CASE WHEN rate_limits.reset_at<now() THEN now()+($2 * interval '1 second') ELSE rate_limits.reset_at END RETURNING count`,
-    [key, windowSeconds],
-  );
-  if (result.rows[0].count > limit)
-    throw new AppError('Too many attempts. Please try again later.', 429);
+  const count = await db.transaction(async (tx) => {
+    await tx.query(
+      'INSERT INTO rate_limits(`key`,count,reset_at) VALUES($1,1,DATE_ADD(UTC_TIMESTAMP(3),INTERVAL $2 SECOND)) ON DUPLICATE KEY UPDATE count=IF(reset_at<UTC_TIMESTAMP(3),1,count+1),reset_at=IF(reset_at<UTC_TIMESTAMP(3),DATE_ADD(UTC_TIMESTAMP(3),INTERVAL $2 SECOND),reset_at)',
+      [key, windowSeconds],
+    );
+    return (
+      await tx.query<{ count: number }>('SELECT count FROM rate_limits WHERE `key`=$1', [key])
+    ).rows[0].count;
+  });
+  if (count > limit) throw new AppError('Too many attempts. Please try again later.', 429);
 }
 export async function audit(
   db: DB,

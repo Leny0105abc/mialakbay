@@ -53,7 +53,7 @@ export async function savePackage(db: DB, raw: unknown, user: User | null) {
       const days = id
         ? (
             await tx.query<{ day: number; count: number }>(
-              'SELECT d.day,(SELECT count(*)::int FROM itinerary_activities a WHERE a.day_id=d.id) count FROM itinerary_days d WHERE package_id=$1 ORDER BY day',
+              'SELECT d.day,(SELECT count(*) FROM itinerary_activities a WHERE a.day_id=d.id) count FROM itinerary_days d WHERE package_id=$1 ORDER BY day',
               [id],
             )
           ).rows
@@ -87,19 +87,19 @@ export async function savePackage(db: DB, raw: unknown, user: User | null) {
     ];
     if (id) {
       const result = await tx.query(
-        `UPDATE packages SET destination_id=$1,slug=$2,title=$3,description=$4,category=$5,duration=$6,min_participants=$7,max_participants=$8,meeting_point=$9,transportation=$10,accommodation=$11,meals=$12,guide=$13,inclusions=$14,exclusions=$15,policies=$16,notes=$17,status=$18,featured=$19,demo=$20,updated_at=now() WHERE id=$21 RETURNING id`,
+        'UPDATE packages SET destination_id=$1,slug=$2,title=$3,description=$4,category=$5,duration=$6,min_participants=$7,max_participants=$8,meeting_point=$9,transportation=$10,accommodation=$11,meals=$12,guide=$13,inclusions=$14,exclusions=$15,policies=$16,notes=$17,status=$18,featured=$19,demo=$20,updated_at=now() WHERE id=$21',
         [...params, id],
       );
-      if (!result.rows.length) throw new AppError('Package not found.', 404);
+      if (!result.affectedRows) throw new AppError('Package not found.', 404);
     } else
       id = (
-        await tx.query<{ id: string }>(
-          `INSERT INTO packages(destination_id,slug,title,description,category,duration,min_participants,max_participants,meeting_point,transportation,accommodation,meals,guide,inclusions,exclusions,policies,notes,status,featured,demo) VALUES(${params.map((_, i) => '$' + (i + 1)).join(',')}) RETURNING id`,
+        await tx.insertSQL<{ id: string }>(
+          `INSERT INTO packages(destination_id,slug,title,description,category,duration,min_participants,max_participants,meeting_point,transportation,accommodation,meals,guide,inclusions,exclusions,policies,notes,status,featured,demo) VALUES(${params.map((_, i) => '$' + (i + 1)).join(',')})`,
           params,
         )
       ).rows[0].id;
     await tx.query(
-      'INSERT INTO package_pricing(package_id,adult_price,child_price,deposit_percent) VALUES($1,$2,$3,$4) ON CONFLICT(package_id) DO UPDATE SET adult_price=$2,child_price=$3,deposit_percent=$4',
+      'INSERT INTO package_pricing(package_id,adult_price,child_price,deposit_percent) VALUES($1,$2,$3,$4) ON DUPLICATE KEY UPDATE adult_price=$2,child_price=$3,deposit_percent=$4',
       [id, p.adult_price, p.child_price, p.deposit_percent],
     );
     await tx.query('DELETE FROM package_images WHERE package_id=$1', [id]);
@@ -130,8 +130,8 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
       id =
         v.id ||
         (
-          await tx.query<{ id: string }>(
-            'INSERT INTO destinations(name,country,description,image_url,featured) VALUES($1,$2,$3,$4,$5) RETURNING id',
+          await tx.insertSQL<{ id: string }>(
+            'INSERT INTO destinations(name,country,description,image_url,featured) VALUES($1,$2,$3,$4,$5)',
             [v.name, v.country, v.description, v.image_url, v.featured],
           )
         ).rows[0].id;
@@ -190,8 +190,8 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
         id = v.id;
       } else
         id = (
-          await tx.query<{ id: string }>(
-            'INSERT INTO departures(package_id,departure_at,booking_deadline,capacity,price_adjustment,available) VALUES($1,$2,$3,$4,$5,$6) RETURNING id',
+          await tx.insertSQL<{ id: string }>(
+            'INSERT INTO departures(package_id,departure_at,booking_deadline,capacity,price_adjustment,available) VALUES($1,$2,$3,$4,$5,$6)',
             [
               v.package_id,
               v.departure_at,
@@ -243,8 +243,8 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
       await tx.query('DELETE FROM itinerary_days WHERE package_id=$1', [v.package_id]);
       for (const d of v.days) {
         const day = (
-          await tx.query<{ id: string }>(
-            'INSERT INTO itinerary_days(package_id,day,title) VALUES($1,$2,$3) RETURNING id',
+          await tx.insertSQL<{ id: string }>(
+            'INSERT INTO itinerary_days(package_id,day,title) VALUES($1,$2,$3)',
             [v.package_id, d.day, d.title],
           )
         ).rows[0];
@@ -311,8 +311,8 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
         id = v.id;
       } else
         id = (
-          await tx.query<{ id: string }>(
-            'INSERT INTO promotions(name,code,discount_type,value,starts_at,ends_at,usage_limit,min_total,active) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+          await tx.insertSQL<{ id: string }>(
+            'INSERT INTO promotions(name,code,discount_type,value,starts_at,ends_at,usage_limit,min_total,active) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)',
             [
               v.name,
               v.code,
@@ -378,7 +378,7 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
         })
         .parse(raw);
       await tx.query(
-        'INSERT INTO website_content(key,title,body) VALUES($1,$2,$3) ON CONFLICT(key) DO UPDATE SET title=$2,body=$3,updated_at=now()',
+        'INSERT INTO website_content(`key`,title,body) VALUES($1,$2,$3) ON DUPLICATE KEY UPDATE title=$2,body=$3,updated_at=now()',
         [v.key, v.title, v.body],
       );
       id = v.key;
@@ -393,7 +393,7 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
         .parse(raw);
       await tx.query("UPDATE users SET name=$1 WHERE id=$2 AND role='CUSTOMER'", [v.name, v.id]);
       await tx.query(
-        'INSERT INTO customer_profiles(user_id,phone,address) VALUES($1,$2,$3) ON CONFLICT(user_id) DO UPDATE SET phone=$2,address=$3',
+        'INSERT INTO customer_profiles(user_id,phone,address) VALUES($1,$2,$3) ON DUPLICATE KEY UPDATE phone=$2,address=$3',
         [v.id, v.phone, v.address],
       );
       id = v.id;
@@ -426,7 +426,7 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
         })
         .parse(raw);
       await tx.query(
-        "INSERT INTO app_settings(key,value) VALUES('business',$1) ON CONFLICT(key) DO UPDATE SET value=$1,updated_at=now()",
+        "INSERT INTO app_settings(`key`,value) VALUES('business',$1) ON DUPLICATE KEY UPDATE value=$1,updated_at=now()",
         [JSON.stringify(v)],
       );
       id = 'business';
@@ -441,8 +441,8 @@ export async function adminSave(db: DB, section: string, raw: unknown, user: Use
         })
         .parse(raw);
       id = (
-        await tx.query<{ id: string }>(
-          "INSERT INTO users(name,email,password_hash,role) VALUES($1,$2,$3,'STAFF') RETURNING id",
+        await tx.insertSQL<{ id: string }>(
+          "INSERT INTO users(name,email,password_hash,role) VALUES($1,$2,$3,'STAFF')",
           [v.name, v.email, await hashPassword(v.password)],
         )
       ).rows[0].id;

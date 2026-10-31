@@ -147,8 +147,8 @@ export async function seed(db: DB) {
   await db.transaction(async (tx) => {
     for (const item of seeds) {
       const destination = (
-        await tx.query<{ id: string }>(
-          'INSERT INTO destinations(name,country,description,image_url,featured) VALUES($1,$2,$3,$4,true) RETURNING id',
+        await tx.insertSQL<{ id: string }>(
+          'INSERT INTO destinations(name,country,description,image_url,featured) VALUES($1,$2,$3,$4,true)',
           [
             item.destination,
             item.category === 'International' ? item.destination : 'Philippines',
@@ -158,8 +158,8 @@ export async function seed(db: DB) {
         )
       ).rows[0];
       const pkg = (
-        await tx.query<{ id: string }>(
-          `INSERT INTO packages(destination_id,slug,title,description,category,duration,min_participants,max_participants,meeting_point,transportation,accommodation,meals,guide,inclusions,exclusions,policies,notes,status,featured,demo) VALUES($1,$2,$3,$4,$5,$6,1,20,$7,$8,$9,$10,$11,$12,$13,$14,$15,'PUBLISHED',$16,true) RETURNING id`,
+        await tx.insertSQL<{ id: string }>(
+          "INSERT INTO packages(destination_id,slug,title,description,category,duration,min_participants,max_participants,meeting_point,transportation,accommodation,meals,guide,inclusions,exclusions,policies,notes,status,featured,demo) VALUES($1,$2,$3,$4,$5,$6,1,20,$7,$8,$9,$10,$11,$12,$13,$14,$15,'PUBLISHED',$16,true)",
           [
             destination.id,
             item.title.toLowerCase().replaceAll(' ', '-'),
@@ -211,8 +211,8 @@ export async function seed(db: DB) {
                 ? 'Explore the highlights'
                 : 'Make the day your own';
         const day = (
-          await tx.query<{ id: string }>(
-            'INSERT INTO itinerary_days(package_id,day,title) VALUES($1,$2,$3) RETURNING id',
+          await tx.insertSQL<{ id: string }>(
+            'INSERT INTO itinerary_days(package_id,day,title) VALUES($1,$2,$3)',
             [pkg.id, d, title],
           )
         ).rows[0];
@@ -253,7 +253,7 @@ export async function seed(db: DB) {
       "INSERT INTO promotions(name,code,discount_type,value,starts_at,ends_at,usage_limit,min_total) VALUES('A little more adventure','LAKBAY10','PERCENT',10,$1,$2,100,500000)",
       [start.toISOString(), end.toISOString()],
     );
-    await tx.query("INSERT INTO app_settings(key,value) VALUES('business',$1)", [
+    await tx.query("INSERT INTO app_settings(`key`,value) VALUES('business',$1)", [
       JSON.stringify(defaultSettings),
     ]);
     const content = [
@@ -299,7 +299,7 @@ export async function seed(db: DB) {
       ],
     ];
     for (const [key, title, body] of content)
-      await tx.query('INSERT INTO website_content(key,title,body) VALUES($1,$2,$3)', [
+      await tx.query('INSERT INTO website_content(`key`,title,body) VALUES($1,$2,$3)', [
         key,
         title,
         body,

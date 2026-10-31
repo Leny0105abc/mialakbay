@@ -13,8 +13,8 @@ const db = await getDB();
 const exists = await db.query('SELECT id FROM users WHERE email=$1', [input.email]);
 if (exists.rows.length)
   throw new Error('An account already uses this email. No existing account was modified.');
-const u = await db.query<{ id: string }>(
-  "INSERT INTO users(email,name,password_hash,role) VALUES($1,$2,$3,'SUPER_ADMIN') RETURNING id",
+const u = await db.insertSQL<{ id: string }>(
+  "INSERT INTO users(email,name,password_hash,role) VALUES($1,$2,$3,'SUPER_ADMIN')",
   [input.email, input.name, await hashPassword(input.password)],
 );
 await db.query('INSERT INTO customer_profiles(user_id) VALUES($1)', [u.rows[0].id]);

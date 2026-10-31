@@ -1,24 +1,19 @@
 import 'dotenv/config';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir } from 'node:fs/promises';
-import path from 'node:path';
 import assert from 'node:assert/strict';
-import { embedded, migrate } from '../src/lib/db';
+import { testDatabase } from './test-db';
 import { seed } from '../src/lib/seed';
 import { hashPassword } from '../src/lib/security';
 import type { Tour, Departure, Booking, Settings, Day } from '../src/lib/types';
-const dir = path.resolve('.data', 'http-smoke-' + randomUUID());
-await mkdir(dir, { recursive: true });
-const db = embedded(dir);
-await migrate(db);
+const testStore = await testDatabase();
+const db = testStore.db;
 await seed(db);
 const password = randomUUID() + randomUUID();
 await db.query(
   "INSERT INTO users(name,email,password_hash,role) VALUES('HTTP Test Administrator','smoke-admin@example.test',$1,'SUPER_ADMIN')",
   [await hashPassword(password)],
 );
-await db.close();
 const base = 'http://localhost:3101';
 let output = '';
 const server = spawn(
@@ -29,9 +24,7 @@ const server = spawn(
     env: {
       ...process.env,
       NODE_ENV: 'production',
-      DATABASE_URL: '',
-      PGLITE_PATH: dir,
-      ALLOW_EMBEDDED_PRODUCTION: 'true',
+      ...testStore.env,
       APP_URL: base,
       RESEND_API_KEY: '',
       EMAIL_FROM: '',
@@ -352,7 +345,7 @@ try {
   console.log(
     'HTTP smoke passed: production rendering, registration, RBAC, CSRF, pricing, reservation, payment review, idempotency, voucher PDF, reports, settings, inquiries, quotations, notifications, CSV, refund, and logout.',
   );
-  console.log('Isolated QA database: ' + dir + ' (contains generated test data only).');
+  console.log('Isolated MariaDB test schema: ' + testStore.name);
 } catch (e) {
   console.error(output.slice(-8000));
   throw e;
@@ -361,4 +354,5 @@ try {
     server.kill();
     await new Promise<void>((resolve) => server.once('exit', () => resolve()));
   }
+  await testStore.close();
 }

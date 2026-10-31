@@ -1,6 +1,7 @@
 import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { embedded, migrate, type DB } from '../src/lib/db';
+import { type DB } from '../src/lib/db';
+import { testDatabase } from '../scripts/test-db';
 import { seed } from '../src/lib/seed';
 import {
   createBooking,
@@ -23,14 +24,15 @@ let admin: User;
 let customer: User;
 let other: User;
 let pkg: Tour;
+let testStore: Awaited<ReturnType<typeof testDatabase>>;
 before(async () => {
-  db = embedded();
-  await migrate(db);
+  testStore = await testDatabase();
+  db = testStore.db;
   await seed(db);
   const add = async (email: string, role: string) =>
     (
-      await db.query<User>(
-        'INSERT INTO users(name,email,password_hash,role) VALUES($1,$2,$3,$4) RETURNING id,name,email,role',
+      await db.insertSQL<User>(
+        'INSERT INTO users(name,email,password_hash,role) VALUES($1,$2,$3,$4)',
         ['Test User', email, await hashPassword('Only-A-Test-Password!'), role],
       )
     ).rows[0];
@@ -40,7 +42,7 @@ before(async () => {
   pkg = (await tours(false, db))[0];
 });
 after(async () => {
-  await db.close();
+  await testStore?.close();
 });
 test('departure date filtering follows Manila across UTC midnight', () => {
   assert.equal(dayKey('2026-11-06T16:30:00Z'), '2026-11-07');
@@ -64,9 +66,14 @@ test('packages cannot publish without a complete itinerary', async () => {
 });
 async function schedule(capacity = 20) {
   return (
-    await db.query<{ id: string }>(
-      "INSERT INTO departures(package_id,departure_at,booking_deadline,capacity) VALUES($1,now()+interval '80 days'+(random()*1000)*interval '1 second',now()+interval '75 days',$2) RETURNING id",
-      [pkg.id, capacity],
+    await db.insertSQL<{ id: string }>(
+      'INSERT INTO departures(package_id,departure_at,booking_deadline,capacity) VALUES($1,$2,$3,$4)',
+      [
+        pkg.id,
+        new Date(Date.now() + 80 * 86400000 + Math.random() * 1000000),
+        new Date(Date.now() + 75 * 86400000),
+        capacity,
+      ],
     )
   ).rows[0].id;
 }
@@ -232,7 +239,7 @@ test('unpaid cancellation and hold expiry return seats without double-release', 
   const a = await createBooking(db, input(dep), customer);
   const b = await createBooking(db, input(dep), customer);
   await cancelBooking(db, a.booking.reference, 'Plans changed for testing', customer);
-  await db.query("UPDATE bookings SET expires_at=now()-interval '1 second' WHERE id=$1", [
+  await db.query('UPDATE bookings SET expires_at=now()-INTERVAL 1 SECOND WHERE id=$1', [
     b.booking.id,
   ]);
   await expireHolds(db);
@@ -246,7 +253,7 @@ test('unpaid cancellation and hold expiry return seats without double-release', 
 test('promotion usage limits remain correct under competing reservations', async () => {
   const dep = await schedule(10);
   await db.query(
-    "INSERT INTO promotions(name,code,discount_type,value,starts_at,ends_at,usage_limit) VALUES('One use','ONEONLY','PERCENT',5,now()-interval '1 day',now()+interval '2 days',1)",
+    "INSERT INTO promotions(name,code,discount_type,value,starts_at,ends_at,usage_limit) VALUES('One use','ONEONLY','PERCENT',5,now()-INTERVAL 1 DAY,now()+INTERVAL 2 DAY,1)",
   );
   const results = await Promise.allSettled(
     Array.from({ length: 4 }, () => createBooking(db, input(dep, { code: 'ONEONLY' }), customer)),

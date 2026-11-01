@@ -164,9 +164,8 @@ export default async function PublicPage(props: Props) {
         </div>
         {p.demo && (
           <div className="notice">
-            Fictional demonstration package. All prices, itineraries, accommodations, and departure
-            dates are sample data for testing. Photos are illustrative. No actual travel
-            availability is claimed.
+            Sample package. All prices, itineraries, accommodations, and departure dates are sample
+            data for testing. Photos are illustrative. No actual travel availability is claimed.
           </div>
         )}
         <div className="package-body">
@@ -469,7 +468,7 @@ export default async function PublicPage(props: Props) {
             )}
             <p style={{ fontSize: 11, marginTop: 25 }}>
               No live flight inventory, visa approval, accreditation, or government authorization is
-              implied by this demonstration application.
+              implied by this application.
             </p>
           </div>
           <div className="panel">

@@ -99,8 +99,8 @@ export default function Checkout({
       </div>
       {tour.demo && (
         <div className="notice">
-          This is a fictional demonstration trip. Use test details and test payment references. Do
-          not transfer real money to test this installation.
+          This is a sample trip. Use test details and test payment references. Do not transfer real
+          money to test this installation.
         </div>
       )}
       <div className="checkout-layout">

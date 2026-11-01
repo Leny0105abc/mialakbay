@@ -30,8 +30,8 @@ export default function Calendar({
   return (
     <>
       <div className="notice">
-        Departures marked as demonstration data are for testing. Availability comes from this
-        application’s seat inventory.
+        Departures marked as sample data are for testing. Availability comes from this application’s
+        seat inventory.
       </div>
       <div className="calendar-toolbar">
         <div>

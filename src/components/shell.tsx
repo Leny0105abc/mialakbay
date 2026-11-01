@@ -65,7 +65,7 @@ export function Header({
     <>
       <div className="announcement">
         {demo
-          ? 'A world of possibilities. A demo made for exploring.'
+          ? 'A world of possibilities. Made for exploring.'
           : 'Thoughtfully planned. Beautifully experienced.'}
         <span>
           {demo ? 'Sample tours & prices · For testing only' : 'Your next adventure starts here'}{' '}

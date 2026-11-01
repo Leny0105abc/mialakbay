@@ -15,7 +15,7 @@ export function TourCard({ tour, index = 0 }: { tour: Tour; index?: number }) {
         <span className="photo-arrow">
           <ArrowUpRight size={19} />
         </span>
-        {tour.demo && <span className="demo-photo">DEMO TRIP</span>}
+        {tour.demo && <span className="sample-photo">SAMPLE TRIP</span>}
       </Link>
       <div className="tour-content">
         <div className="tour-location">

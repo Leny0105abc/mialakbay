@@ -158,7 +158,7 @@ async function handle(req: NextRequest, context: Context) {
           line('BOOKING POLICY', 12, true);
           line(b.snapshot.policies);
           line(
-            'This voucher reflects recorded application data. Demo itineraries are for testing.',
+            'This voucher reflects recorded application data. Sample itineraries are for testing.',
           );
           return new NextResponse(Buffer.from(await pdf.save()), {
             headers: {

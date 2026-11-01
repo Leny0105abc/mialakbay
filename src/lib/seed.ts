@@ -181,8 +181,8 @@ export async function seed(db: DB) {
               'Personal expenses',
               'Optional activities and meals not listed',
             ]),
-            'Demonstration policy: 30% deposit after agency review; remaining balance before departure. Cancellation and refund requests require staff review. Actual agency terms must be configured before accepting live bookings.',
-            'Fictional demonstration package. Prices, accommodations and departures are for application testing only.',
+            'Sample policy: 30% deposit after agency review; remaining balance before departure. Cancellation and refund requests require staff review. Actual agency terms must be configured before accepting live bookings.',
+            'Sample package. Prices, accommodations and departures are for application testing only.',
             item.key === 'palawan' || item.key === 'boracay' || item.key === 'siargao',
           ],
         )
@@ -260,27 +260,27 @@ export async function seed(db: DB) {
       [
         'about',
         'Every great trip starts with a little curiosity.',
-        'Lakbay Travel & Tours is a demonstration travel management application built around thoughtful itineraries, clear pricing, and a personal approach. Replace this introduction with your agency’s story before launch. No accreditation or operating history is claimed.',
+        'Lakbay Travel & Tours is a sample travel management application built around thoughtful itineraries, clear pricing, and a personal approach. Replace this introduction with your agency’s story before launch. No accreditation or operating history is claimed.',
       ],
       [
         'privacy',
         'Your privacy matters',
-        'Demonstration privacy notice. We collect contact information and traveler names to manage reservations, payment references for manual verification, and account details for access. Configure your legal business identity, retention periods, lawful processing grounds, service providers, rights contact, and applicable policy before accepting live customer data.',
+        'Sample privacy notice. We collect contact information and traveler names to manage reservations, payment references for manual verification, and account details for access. Configure your legal business identity, retention periods, lawful processing grounds, service providers, rights contact, and applicable policy before accepting live customer data.',
       ],
       [
         'terms',
         'Booking terms',
-        'Demonstration booking terms. Submitting a reservation holds capacity for 48 hours; it does not confirm a trip. Staff must verify the required deposit. Package inclusions, original prices, and itinerary are preserved with the reservation. Weather and operational changes require agency coordination. Replace these sample terms with your approved booking terms.',
+        'Sample booking terms. Submitting a reservation holds capacity for 48 hours; it does not confirm a trip. Staff must verify the required deposit. Package inclusions, original prices, and itinerary are preserved with the reservation. Weather and operational changes require agency coordination. Replace these sample terms with your approved booking terms.',
       ],
       [
         'cancellation',
         'Cancellation & refunds',
-        'Demonstration policy. Request a cancellation from your booking page. Unpaid reservations may be cancelled and their seats released. Reservations with recorded payments require staff review. A refund status records an offline refund only after staff enters a transfer reference; the application does not move money. Configure actual fees, deadlines, and refund timelines before launch.',
+        'Sample policy. Request a cancellation from your booking page. Unpaid reservations may be cancelled and their seats released. Reservations with recorded payments require staff review. A refund status records an offline refund only after staff enters a transfer reference; the application does not move money. Configure actual fees, deadlines, and refund timelines before launch.',
       ],
       [
         'faq',
         'A few things you might be wondering',
-        'How do I confirm a booking?|Choose a package and date, enter your travelers, and submit a reservation. Your booking is confirmed only after staff verifies the required deposit.\nAre flights included?|Only if the package specifically lists flights as an inclusion. Otherwise request a separate quotation.\nCan you arrange a custom trip?|Absolutely. Use the custom tour form to share dates, interests, group size, and budget. Staff can prepare a quotation.\nWhat happens if the weather changes?|Staff will coordinate changes according to the package policy. Safety and local operating conditions may affect activities.\nAre these real departure dates?|This installation starts with fictional demonstration packages and dates for testing. The agency must replace and approve them before live sales.',
+        'How do I confirm a booking?|Choose a package and date, enter your travelers, and submit a reservation. Your booking is confirmed only after staff verifies the required deposit.\nAre flights included?|Only if the package specifically lists flights as an inclusion. Otherwise request a separate quotation.\nCan you arrange a custom trip?|Absolutely. Use the custom tour form to share dates, interests, group size, and budget. Staff can prepare a quotation.\nWhat happens if the weather changes?|Staff will coordinate changes according to the package policy. Safety and local operating conditions may affect activities.\nAre these real departure dates?|This installation starts with sample packages and dates for testing. The agency must replace and approve them before live sales.',
       ],
       [
         'blog-packing',

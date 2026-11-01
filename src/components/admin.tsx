@@ -263,7 +263,7 @@ export default function AdminConsole({ section, user }: { section: string; user:
           <p className="chart-description">
             Revenue = verified payment ledger receipts minus recorded offline refunds, grouped by
             receipt month in Asia/Manila. Reservation value and unverified submissions are excluded.
-            Demo transactions, if you create any, are included.
+            Test transactions, if you create any, are included.
           </p>
           <div className="admin-columns">
             <div className="panel">
@@ -392,7 +392,7 @@ export default function AdminConsole({ section, user }: { section: string; user:
                     <strong>{s(r, 'title')}</strong>
                     <small>
                       {n(r, 'duration')} days · {s(r, 'category')}
-                      {r.demo ? ' · Demo' : ''}
+                      {r.demo ? ' · Sample' : ''}
                     </small>
                   </td>
                   <td>{s(r, 'destination')}</td>
@@ -1056,11 +1056,7 @@ function EditForm({
               s(r, 'status') || 'DRAFT',
             )}
             {check('featured', 'Feature on homepage')}
-            {check(
-              'demo',
-              'Clearly label as fictional demonstration data',
-              r.id ? b(r, 'demo') : true,
-            )}
+            {check('demo', 'Clearly label as sample data', r.id ? b(r, 'demo') : true)}
             <div className="span-2">
               <Field label="Gallery images (one URL per line)">
                 <textarea

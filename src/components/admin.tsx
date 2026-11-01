@@ -18,7 +18,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { api, Field, Message, Submit, useAction, formValues } from './ui';
+import { api, Field, PasswordField, Message, Submit, useAction, formValues } from './ui';
 import { money, date, label, categories, statuses } from '@/lib/format';
 import type { User, Tour, Day, Settings, Booking } from '@/lib/types';
 type Row = Record<string, unknown>;
@@ -1311,16 +1311,14 @@ function EditForm({
           <>
             {input('name', 'Staff name')}
             {input('email', 'Email address', 'email')}
-            <Field label="Initial password (minimum 12 characters)">
-              <input
-                type="password"
-                name="password"
-                minLength={12}
-                maxLength={128}
-                autoComplete="new-password"
-                required
-              />
-            </Field>
+            <PasswordField
+              label="Initial password (minimum 12 characters)"
+              name="password"
+              minLength={12}
+              maxLength={128}
+              autoComplete="new-password"
+              required
+            />
             <p className="muted" style={{ fontSize: 11 }}>
               Staff can manage travel operations. Only super administrators can change business
               settings or add staff.

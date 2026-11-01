@@ -1,7 +1,7 @@
 'use client';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { api, Field, Submit, Message, useAction, formValues } from './ui';
+import { api, Field, PasswordField, Submit, Message, useAction, formValues } from './ui';
 import type { User } from '@/lib/types';
 export function AuthForm({
   register = false,
@@ -79,19 +79,15 @@ export function AuthForm({
             <Field label="Email address">
               <input name="email" type="email" autoComplete="email" required maxLength={254} />
             </Field>
-            <Field
+            <PasswordField
               label="Password"
               hint={register ? 'At least 12 characters. Use a unique password.' : undefined}
-            >
-              <input
-                name="password"
-                type="password"
-                autoComplete={register ? 'new-password' : 'current-password'}
-                minLength={register ? 12 : 1}
-                maxLength={128}
-                required
-              />
-            </Field>
+              name="password"
+              autoComplete={register ? 'new-password' : 'current-password'}
+              minLength={register ? 12 : 1}
+              maxLength={128}
+              required
+            />
             <Message error={state.error} />
             <Submit busy={state.busy}>{register ? 'Create my account' : 'Sign in'}</Submit>
           </form>

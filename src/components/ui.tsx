@@ -1,7 +1,7 @@
 'use client';
-import { useState, Children, isValidElement, cloneElement } from 'react';
-import type { ReactNode, FormEvent, ReactElement } from 'react';
-import { LoaderCircle, CheckCircle2, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { useState, useId, Children, isValidElement, cloneElement } from 'react';
+import type { ReactNode, FormEvent, ReactElement, InputHTMLAttributes } from 'react';
+import { LoaderCircle, CheckCircle2, AlertCircle, ArrowUpRight, Eye, EyeOff } from 'lucide-react';
 export async function api<T = Record<string, unknown>>(path: string, body?: unknown): Promise<T> {
   const res = await fetch('/api/' + path, {
     method: body === undefined ? 'GET' : 'POST',
@@ -34,6 +34,44 @@ export function Field({
       )}
       {hint && <small>{hint}</small>}
     </label>
+  );
+}
+export function PasswordField({
+  label = 'Password',
+  hint,
+  id,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & { label?: string; hint?: string }) {
+  const [visible, setVisible] = useState(false);
+  const generatedId = useId();
+  const inputId = id || generatedId;
+  const hintId = `${inputId}-hint`;
+  const description = [props['aria-describedby'], hint && hintId].filter(Boolean).join(' ');
+  return (
+    <div className="field">
+      <label htmlFor={inputId}>{label}</label>
+      <div className="password-control">
+        <input
+          {...props}
+          id={inputId}
+          type={visible ? 'text' : 'password'}
+          aria-describedby={description || undefined}
+        />
+        <button
+          type="button"
+          className="password-toggle"
+          aria-label={visible ? 'Hide password' : 'Show password'}
+          aria-controls={inputId}
+          aria-pressed={visible}
+          disabled={props.disabled}
+          onClick={() => setVisible((current) => !current)}
+        >
+          {visible ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
+          {visible ? 'Hide' : 'Show'}
+        </button>
+      </div>
+      {hint && <small id={hintId}>{hint}</small>}
+    </div>
   );
 }
 export function Message({ error, success }: { error?: string; success?: string }) {

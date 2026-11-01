@@ -47,9 +47,13 @@ The first administrator is created through `npm run admin:create` using temporar
 4. Schedule `npm run maintenance` every 15 minutes with the same database settings to expire unpaid holds, create upcoming-trip reminders, and retry configured emails.
 5. Back up both the database and uploaded image records. Preserve the previous deployment and original database until restoration has been verified.
 
-## October 31 recovery evidence
+## October 31–November 1 recovery evidence
 
 The old production runtime returned HTTP 500 and logged PGlite `RuntimeError: Aborted()`. Testing a private copy of its storage also reported an invalid recovery checkpoint. Its files and source were backed up before replacement, outside public_html. No archive, database files, credentials, or customer records are included in Git.
+
+On November 1 the dedicated Hostinger database connected successfully using MariaDB 11.8.9. Both migrations were applied, producing 28 tables, and the fictional demonstration catalog was seeded. Hostinger's managed builder successfully deployed the MariaDB source as release `01a1967b-5d8d-7333-b845-f903cd7f4364`; this avoided the shared account's SSH build process limit. The health endpoint and six checked public routes returned HTTP 200, and the previously failing browser tab rendered the home page after reload. The deployed runtime contains mysql2 and no PGlite package.
+
+The original embedded database was not imported from its damaged files. Its private pre-repair backup remains preserved. The new MariaDB schema and application environment also have private server-side backups outside public_html; credentials are never included in the source ZIP or Git repository.
 
 If the original store contains business records, recover a valid older backup and export its data before importing it. A damaged store must not be silently treated as a valid migration or deleted after starting a fresh demo schema.
 
